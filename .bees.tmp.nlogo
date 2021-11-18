@@ -40,7 +40,7 @@ to setup-turtles
     set shape "bee"
   ]
   create-bees number-bees [
-    setxy random-xcor random-ycor
+    setxy random-xcor -  random-ycor - 5
     set size 1
     set age 30
     ifelse month <= 5
@@ -98,7 +98,7 @@ end
 
 to breed-turtles
   create-bees number-bees * 2000 / 60000 [
-    setxy random-xcor random-ycor
+    setxy (random-xcor - 5) (random-ycor - 5)
     set age 0
     ifelse month >= 7                                           ;; birth month of winterbees
     [ set max-age (random 30) + minlife-winter ]
