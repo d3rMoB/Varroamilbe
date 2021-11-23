@@ -2,16 +2,21 @@ breed [queens queen]
 breed [bees bee]
 breed [mites mite]
 
-turtles-own
-  [ age               ;; how many days old the turtle is
-    max-age
-  ]
+turtles-own [
+  age               ;; how many days old the turtle is
+  max-age
+]
 
-globals
-  [ minlife-summer
-    minlife-winter
-    month
-  ]
+mites-own [
+  bottom
+  age-alone
+]
+
+globals [
+  minlife-summer
+  minlife-winter
+  month
+]
 
 to setup
   clear-all
@@ -37,6 +42,7 @@ to setup-turtles
     set size 2
     set age 30
     set max-age (random (2 * 365)) + 3 * 365
+    set color yellow
     set shape "bee"
   ]
   create-bees number-bees [
@@ -44,66 +50,146 @@ to setup-turtles
     set size 1
     set age 30
     ifelse month <= 5
-    [ set max-age (random 30) + minlife-summer ]
-    [ set max-age (random 30) + minlife-winter ]
+      [ set max-age (random 30) + minlife-summer ]
+      [ set max-age (random 30) + minlife-winter ]
+    set color green
     set shape "bee"
-  ]
-  create-mites number-mites [
-    setxy random-xcor random-ycor
-    set size 0.5
-    set age 30
-    set max-age (random 30) + minlife-summer
-    set shape "dot"
   ]
 end
 
 to go
   set month int ((ticks mod 365) / 30.4 )
   check-turtles
-  if month <= 7 [ breed-turtles ]                            ;;
+  if month <= 7 [
+    breed-bees
+    breed-queens
+  ]
   tick
 end
 
 to check-turtles
   ask queens [
-    get-older
-    set shape bee-shape
-    move-turtles
+    bee-older
+    remove-queens
+    if age > 16 [
+      set shape bee-shape
+      move-queens
+    ]
   ]
   ask bees [
-    get-older
+    bee-older
     if age > 20 [
       set shape bee-shape
-      move-turtles
+      move-bees
+      infect-bees
     ]
   ]
   ask mites [
-    get-older
-    move-turtles
+    mite-older
+    new-victim
   ]
 end
 
-to get-older
+to bee-older
   set age age + 1
-  if age > max-age [ die ]
+  set max-age max-age - (count my-links)
+  if age > max-age [
+    ask my-links [
+      ask other-end [
+        if (random 10) > 8 [ set bottom 1 ]
+      ]
+    ]
+    die
+  ]
 end
 
-to move-turtles
+to mite-older
+  if (count my-links) < 1 [
+    set age-alone age-alone - 1
+  ]
+  set age age + 1
+  if age > max-age or age-alone < 1 [ die ]
+end
+
+to move-bees
   ifelse distancexy 0 0 > 19
-  [ facexy 0 0 ]
-  [ right random 90
-    left random 90 ]
+    [ facexy 0 0 ]
+    [ right random 90
+      left random 90 ]
+  forward 1
+
+  let xx xcor
+  let yy ycor
+  ask my-links [
+    ask other-end [ setxy xx yy ]
+  ]
+end
+
+to move-queens
+  ifelse distancexy 0 0 > 2
+    [ facexy 0 0 ]
+    [ right random 90
+      left random 90 ]
   forward 1
 end
 
-to breed-turtles
+to breed-queens
+  if count queens < 1 [
+    create-queens (random 2) + 2 [
+      setxy 0 0
+      set age 0
+      set size 2
+      set max-age (random (2 * 365)) + 3 * 365
+      set color yellow
+      set shape "larva"
+    ]
+  ]
+end
+
+to remove-queens
+  if count queens with [ age > 16 ] > 1 [
+    ask one-of queens [
+      if (random 10) > 8 [ die ]
+    ]
+  ]
+end
+
+to breed-bees
   create-bees number-bees * 2000 / 60000 [
     setxy random-xcor random-ycor
     set age 0
     ifelse month >= 7                                           ;; birth month of winterbees
-    [ set max-age (random 30) + minlife-winter ]
-    [ set max-age (random 30) + minlife-summer ]
+      [ set max-age (random 30) + minlife-winter ]
+      [ set max-age (random 30) + minlife-summer ]
+    set color green
     set shape "larva"
+    set heading 90
+  ]
+end
+
+to infect-bees
+  if (random 100) < probability-mites and month <= 7 [
+    hatch-mites 1 [
+      create-link-with myself
+      set size 1
+      set age 20
+      set age-alone 7
+      ifelse month >= 7
+        [ set max-age (random 30) + minlife-winter ]
+        [ set max-age (random 30) + minlife-summer ]
+      set color red
+      set shape "dot"
+    ]
+  ]
+end
+
+to new-victim
+  if (count my-links) < 1 and bottom = 0 [
+    let victim one-of bees-here
+    if victim != nobody [
+      ask victim [ create-link-with myself ]
+      set age-alone 7
+    ]
   ]
 end
 
@@ -191,6 +277,7 @@ PENS
 "bees" 1.0 0 -1184463 true "" "plot count bees with [ age > 20 ]"
 "larva" 1.0 0 -7500403 true "" "plot count bees with [ age <= 20 ]"
 "mites" 1.0 0 -2674135 true "" "plot count mites"
+"pen-3" 1.0 0 -955883 true "" "plot count mites with [ bottom = 1 ]"
 
 CHOOSER
 46
@@ -222,14 +309,14 @@ SLIDER
 143
 222
 176
-number-mites
-number-mites
+probability-mites
+probability-mites
 0
-100
-0.0
+5
+2.5
+0.1
 1
-1
-NIL
+%
 HORIZONTAL
 
 MONITOR
