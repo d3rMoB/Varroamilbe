@@ -93,7 +93,8 @@ to check-turtles
   ]
   ask bees [
     bee-older
-    if age = 21 and count my-links > 0 [
+    if age < 21 [
+
       breed-mites
     ]
     if age >= 21 [
@@ -232,7 +233,7 @@ to infect-larva
   let count-links 0
   if victim != nobody [
     ask victim [ set count-links count my-links ]
-    if count-links < 1 [
+    if test < 1 [
       ask my-links [ die ]
       ask victim [
         create-link-with myself [ set age-link 0 ]
