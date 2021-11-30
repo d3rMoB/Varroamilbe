@@ -24,7 +24,10 @@ globals [
   minlife-winter
   month
   eggs
+  spawn-diameter
   raid-start
+  infested
+  generation
 ]
 
 to setup
@@ -38,13 +41,15 @@ end
 to setup-constants
   set minlife-summer 60
   set minlife-winter 180
-  set month 0                                               ;; startinterval, month 0 = march
   set eggs start-bees * 2000 / 60000
+  set spawn-diameter start-bees / 30
+  set generation 1
+  set month 0
 end
 
 to setup-patches
   ask patches [
-    ifelse distancexy 0 0 < 10
+    ifelse distancexy 0 0 < spawn-diameter
       [ set pcolor brown ]
       [ set pcolor green ]
   ]
@@ -189,7 +194,7 @@ to breed-bees
   ]
   create-bees larvas [
   ;create-bees count bees with [ age >= 21 ] / 40 [
-    setxy random 11 - 5 random 11 - 5
+    setxy random spawn-diameter - 1 - spawn-diameter / 2 + 1 random spawn-diameter - 1 - spawn-diameter / 2 + 1
     set age 0
     ifelse month >= 7                                           ;; birth month of winterbees
       [ set max-age (random 30) + minlife-winter ]
@@ -290,6 +295,18 @@ to new-victim
   ]
 end
 
+to from-bee-to-new-bew
+  let victim one-of bees-here
+  let linkpartner 0
+  ask my-links [ ask other-end [ set linkpartner count my-links ] ]
+  if victim != nobody [
+    if (linkpartner) >= 2 [
+      ask my-links [ die ]
+      ask victim [ create-link-with myself ]
+    ]
+  ]
+end
+
 to countermeasure
   ask n-of ((count mites) * percentage-mites / 100) mites [
     die
@@ -299,12 +316,23 @@ to countermeasure
   ]
 end
 
+to setup-experiment
+  set infested 0
+  setup-turtles
+  reset-ticks
+end
+
 to go-experiment
-  ifelse count mites >= count bees * 0.15 [
-    output-print (word "the mite population reached the critical point after " (ticks - raid-start) " days")
-    setup
+  if count mites >= count bees * 0.15 and infested = 0[
+    output-print (word "gen" generation ": the mite population reached the critical point " (ticks - raid-start) " days after infestation")
+    set infested 1
   ]
-  [ go ]
+  if count bees <= 1 [
+    output-print (word "gen" generation ": this generation exceeded " (ticks - raid-start) " days after the infestation")
+    set generation generation + 1
+    setup-experiment
+  ]
+  go
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -409,7 +437,7 @@ start-bees
 start-bees
 0
 1000
-197.0
+395.0
 1
 1
 NIL
@@ -423,9 +451,9 @@ SLIDER
 probability-mites
 probability-mites
 0
-5
+1
 0.0
-0.1
+0.01
 1
 %
 HORIZONTAL
@@ -450,7 +478,7 @@ percantage-infestation
 percantage-infestation
 0
 100
-11.0
+5.0
 1
 1
 %
@@ -471,7 +499,7 @@ NIL
 NIL
 NIL
 NIL
-1
+0
 
 BUTTON
 37
@@ -488,7 +516,7 @@ NIL
 NIL
 NIL
 NIL
-1
+0
 
 SLIDER
 37
@@ -520,7 +548,7 @@ NIL
 NIL
 NIL
 NIL
-1
+0
 
 SLIDER
 37
