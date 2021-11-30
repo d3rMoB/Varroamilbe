@@ -5,11 +5,14 @@ breed [mites mite]
 turtles-own [
   age               ;; how many days old the turtle is
   max-age
+  infected
 ]
 
 mites-own [
   bottom
   age-alone
+  mature
+  breeding
 ]
 
 links-own [
@@ -20,6 +23,8 @@ globals [
   minlife-summer
   minlife-winter
   month
+  eggs
+  raid-start
 ]
 
 to setup
@@ -34,10 +39,15 @@ to setup-constants
   set minlife-summer 60
   set minlife-winter 180
   set month 0                                               ;; startinterval, month 0 = march
+  set eggs start-bees * 2000 / 60000
 end
 
 to setup-patches
-  ask patches [ set pcolor brown ]
+  ask patches [
+    ifelse distancexy 0 0 < 10
+      [ set pcolor brown ]
+      [ set pcolor green ]
+  ]
 end
 
 to setup-turtles
@@ -49,7 +59,7 @@ to setup-turtles
     set color yellow
     set shape "bee"
   ]
-  create-bees number-bees [
+  create-bees start-bees [
     setxy random-xcor random-ycor
     set size 1
     set age 30
@@ -65,12 +75,7 @@ to go
   set month int ((ticks mod 365) / 30.4 )
   check-turtles
   check-links
-  if month <= 7 [
-    breed-bees
-    breed-queens
-  ]
-
-  tick
+  if count bees > 0 [ tick ]
 end
 
 to check-links
@@ -80,38 +85,60 @@ to check-links
 end
 
 to check-turtles
-  ask queens [
-    bee-older
-    remove-queens
-    if age = 16 and count my-links > 0 [
-      breed-mites
+  ask mites [
+    mite-older
+    new-victim
+    infest-larva
+
+    if breeding = 1 [
+      let temp 1
+      ask my-links [
+          ask other-end [
+            if age = 21 [ set temp 0 ]
+        ]
+      ]
+      set breeding temp
     ]
-    if age >= 16 [
-      set shape bee-shape
-      move-queens
+
+    if mature = 1 [
+      ask my-links [
+        if other-end != nobody [
+          ask other-end [
+            if age = 13 [ breed-mites ]
+          ]
+        ]
+      ]
     ]
   ]
+
   ask bees [
     bee-older
-    if age = 21 and count my-links > 0 [
-      breed-mites
-    ]
     if age >= 21 [
       set shape bee-shape
       move-bees
       infect-per-tick
     ]
   ]
-  ask mites [
-    mite-older
-    new-victim
-    infect-larva
+
+  ask queens [
+    bee-older
+    remove-queens
+    if age >= 16 [
+      set shape bee-shape
+      move-queens
+    ]
+  ]
+
+  if month <= 7 and count bees with [ age >= 21 ] > start-bees / 5 [
+    breed-bees
+    breed-queens
   ]
 end
 
 to bee-older
   set age age + 1
-  set max-age max-age - ((count my-links) * 2)
+  set max-age max-age - (count my-links)
+  set max-age max-age - infected
   if age > max-age [
     ask my-links [
       ask other-end [
@@ -131,7 +158,10 @@ to mite-older
 end
 
 to move-bees
-  ifelse distancexy 0 0 > 19
+  let radius 19
+  if month > 7 or month = 0
+    [ set radius 8 ]
+  ifelse distancexy 0 0 > radius
     [ facexy 0 0 ]
     [ right random 90
       left random 90 ]
@@ -153,9 +183,13 @@ to move-queens
 end
 
 to breed-bees
-  ; create-bees number-bees * 2000 / 60000 [
-  create-bees count bees with [ age >= 21 ] / 40 [
-    setxy random-xcor random-ycor
+  let larvas (count bees with [ age >= 21 ] * 0.035)
+  if larvas > eggs [
+    set larvas eggs
+  ]
+  create-bees larvas [
+  ;create-bees count bees with [ age >= 21 ] / 40 [
+    setxy random 11 - 5 random 11 - 5
     set age 0
     ifelse month >= 7                                           ;; birth month of winterbees
       [ set max-age (random 30) + minlife-winter ]
@@ -181,7 +215,7 @@ end
 
 to breed-mites
   hatch-mites (random 2 + 1) [
-    create-link-with myself [ set age-link 0 ]
+    create-link-with myself
     set size 1
     set age 20
     set age-alone 7
@@ -203,19 +237,20 @@ end
 
 to infect-per-tick
   if (random 100) < probability-mites and month <= 7 [
-    infect-bee
+    infest-bee
   ]
 end
 
 to bee-raid
-  ask n-of ((count bees with [ age >= 21 ]) * percantage-infection / 100) bees with [ age >= 21] [
-    infect-bee
+  set raid-start ticks
+  ask n-of ((count bees with [ age >= 21 ]) * percantage-infestation / 100) bees with [ age >= 21] [
+    infest-bee
   ]
 end
 
-to infect-bee
+to infest-bee
   hatch-mites 1 [
-    create-link-with myself [ set age-link 0 ]
+    create-link-with myself
     set size 1
     set age 20
     set age-alone 7
@@ -225,17 +260,21 @@ to infect-bee
     set color red
     set shape "dot"
   ]
+  set infected random 2
 end
 
-to infect-larva
+to infest-larva
   let victim one-of bees-here with [ age < 9 ]
   let count-links 0
   if victim != nobody [
     ask victim [ set count-links count my-links ]
     if count-links < 1 [
+      set mature 1
+      set breeding 1
       ask my-links [ die ]
       ask victim [
-        create-link-with myself [ set age-link 0 ]
+        create-link-with myself
+        set infected random 2
      ]
     ]
   ]
@@ -245,31 +284,34 @@ to new-victim
   if (count my-links) < 1 and bottom = 0 [
     let victim one-of bees-here
     if victim != nobody [
-      ask victim [ create-link-with myself  [ set age-link 0 ]
-        ]
+      ask victim [ create-link-with myself ]
       set age-alone 7
     ]
   ]
 end
 
-to go-experiment
-  go
-  if count mites >= count bees * 0.15
-  [
-    output-print (word "the mite population reached the critical point after" ticks " days")
-    setup
+to countermeasure
+  ask n-of ((count mites) * percentage-mites / 100) mites [
+    die
+  ]
+  ask n-of ((count bees) * percentage-bees / 100) bees [
+    die
   ]
 end
 
-to startup
-  setup-constants
+to go-experiment
+  ifelse count mites >= count bees * 0.15 [
+    output-print (word "the mite population reached the critical point after " (ticks - raid-start) " days")
+    setup
+  ]
+  [ go ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-238
-44
-779
-586
+253
+45
+794
+587
 -1
 -1
 13.0
@@ -293,10 +335,10 @@ ticks
 30.0
 
 BUTTON
-50
-43
-114
-76
+37
+41
+101
+74
 Setup
 setup
 NIL
@@ -310,10 +352,10 @@ NIL
 1
 
 BUTTON
-131
-43
-194
-76
+118
+41
+181
+74
 go
 go
 T
@@ -329,7 +371,7 @@ NIL
 PLOT
 808
 45
-1008
+1105
 195
 Populations
 days
@@ -346,37 +388,38 @@ PENS
 "larva" 1.0 0 -7500403 true "" "plot count bees with [ age <= 20 ]"
 "mites" 1.0 0 -2674135 true "" "plot count mites"
 "mites bottom" 1.0 0 -955883 true "" "plot count mites with [ bottom = 1 ]"
+"infected bees" 1.0 0 -6459832 true "" "plot count bees with [ infected = 1 ]"
 
 CHOOSER
-46
-436
-184
-481
+39
+540
+177
+585
 bee-shape
 bee-shape
 "bee" "bee 2"
 0
 
 SLIDER
-50
-91
-222
-124
-number-bees
-number-bees
+37
+132
+209
+165
+start-bees
+start-bees
 0
 1000
-331.0
+197.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-50
-143
-222
-176
+37
+184
+209
+217
 probability-mites
 probability-mites
 0
@@ -399,25 +442,25 @@ month
 11
 
 SLIDER
-50
-202
-222
-235
-percantage-infection
-percantage-infection
+37
+239
+230
+272
+percantage-infestation
+percantage-infestation
 0
 100
-50.0
+11.0
 1
 1
-NIL
+%
 HORIZONTAL
 
 BUTTON
-102
-291
-180
-324
+83
+281
+161
+314
 NIL
 bee-raid
 NIL
@@ -431,12 +474,44 @@ NIL
 1
 
 BUTTON
-58
-366
-170
-399
+37
+86
+149
+119
 NIL
 go-experiment
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+37
+340
+209
+373
+percentage-mites
+percentage-mites
+0
+100
+11.0
+1
+1
+%
+HORIZONTAL
+
+BUTTON
+62
+424
+183
+457
+NIL
+countermeasure
 NIL
 1
 T
@@ -446,6 +521,21 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+37
+382
+209
+415
+percentage-bees
+percentage-bees
+0
+100
+0.0
+1
+1
+%
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
