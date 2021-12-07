@@ -163,9 +163,9 @@ to mite-older
 end
 
 to move-bees
-  let radius 19
+  let radius 20
   if month > 7 or month = 0
-    [ set radius 8 ]
+    [ set radius spawn-diameter / 2 ]
   ifelse distancexy 0 0 > radius
     [ facexy 0 0 ]
     [ right random 90
@@ -193,7 +193,6 @@ to breed-bees
     set larvas eggs
   ]
   create-bees larvas [
-  ;create-bees count bees with [ age >= 21 ] / 40 [
     setxy random spawn-diameter - 1 - spawn-diameter / 2 + 1 random spawn-diameter - 1 - spawn-diameter / 2 + 1
     set age 0
     ifelse month >= 7                                           ;; birth month of winterbees
@@ -248,7 +247,7 @@ end
 
 to bee-raid
   set raid-start ticks
-  ask n-of ((count bees with [ age >= 21 ]) * percantage-infestation / 100) bees with [ age >= 21] [
+  ask n-of ((count bees with [ age >= 21 ]) * percentage-infest / 100) bees with [ age >= 21] [
     infest-bee
   ]
 end
@@ -328,7 +327,7 @@ to go-experiment
     set infested 1
   ]
   if count bees <= 1 [
-    output-print (word "gen" generation ": this generation exceeded " (ticks - raid-start) " days after the infestation")
+    output-print (word "gen" generation ": this generation is extinct after " (ticks - raid-start) " days")
     set generation generation + 1
     setup-experiment
   ]
@@ -336,9 +335,9 @@ to go-experiment
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-253
+250
 45
-794
+791
 587
 -1
 -1
@@ -363,10 +362,10 @@ ticks
 30.0
 
 BUTTON
-37
-41
-101
-74
+60
+45
+124
+78
 Setup
 setup
 NIL
@@ -380,10 +379,10 @@ NIL
 1
 
 BUTTON
-118
-41
-181
-74
+141
+45
+204
+78
 go
 go
 T
@@ -397,10 +396,10 @@ NIL
 0
 
 PLOT
-808
+805
 45
-1105
-195
+1102
+214
 Populations
 days
 amount
@@ -419,9 +418,9 @@ PENS
 "infected bees" 1.0 0 -6459832 true "" "plot count bees with [ infected = 1 ]"
 
 CHOOSER
-39
+805
 540
-177
+943
 585
 bee-shape
 bee-shape
@@ -429,25 +428,25 @@ bee-shape
 0
 
 SLIDER
-37
-132
-209
-165
+45
+140
+217
+173
 start-bees
 start-bees
-0
+100
 1000
-395.0
+301.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-37
-184
-209
+45
+220
 217
+253
 probability-mites
 probability-mites
 0
@@ -459,10 +458,10 @@ probability-mites
 HORIZONTAL
 
 MONITOR
-814
-252
-871
-297
+805
+480
+862
+525
 NIL
 month
 17
@@ -470,25 +469,25 @@ month
 11
 
 SLIDER
-37
-239
-230
-272
-percantage-infestation
-percantage-infestation
+45
+360
+217
+393
+percentage-infest
+percentage-infest
 0
-100
-5.0
-1
+10
+1.0
+0.1
 1
 %
 HORIZONTAL
 
 BUTTON
-83
-281
-161
-314
+90
+315
+168
+348
 NIL
 bee-raid
 NIL
@@ -502,10 +501,10 @@ NIL
 0
 
 BUTTON
-37
-86
-149
-119
+75
+90
+187
+123
 NIL
 go-experiment
 T
@@ -519,10 +518,10 @@ NIL
 0
 
 SLIDER
-37
-340
-209
-373
+45
+510
+217
+543
 percentage-mites
 percentage-mites
 0
@@ -534,10 +533,10 @@ percentage-mites
 HORIZONTAL
 
 BUTTON
-62
-424
-183
-457
+70
+465
+191
+498
 NIL
 countermeasure
 NIL
@@ -551,10 +550,10 @@ NIL
 0
 
 SLIDER
-37
-382
-209
-415
+45
+552
+217
+585
 percentage-bees
 percentage-bees
 0
@@ -1065,6 +1064,31 @@ NetLogo 6.2.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="percentage-bees">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percantage-infestation">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-mites">
+      <value value="11"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="bee-shape">
+      <value value="&quot;bee&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="start-bees">
+      <value value="301"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="probability-mites">
+      <value value="0"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
@@ -1078,5 +1102,5 @@ true
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 @#$#@#$#@
-0
+1
 @#$#@#$#@
