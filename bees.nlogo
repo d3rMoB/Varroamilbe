@@ -22,10 +22,9 @@ links-own [
 globals [
   minlife-summer
   minlife-winter
-  month
   eggs
   spawn-diameter
-  raid-start
+  month
   infested
   generation
 ]
@@ -38,13 +37,23 @@ to setup
   reset-ticks
 end
 
+to my-clear-all
+  ; manually clear the globals we want reset, leave `retain-me` alone.
+
+  clear-ticks
+  clear-turtles
+  clear-patches
+  clear-drawing
+  clear-all-plots
+end
+
 to setup-constants
   set minlife-summer 60
   set minlife-winter 180
   set eggs start-bees * 2000 / 60000
   set spawn-diameter start-bees / 30
-  set generation 1
   set month 0
+  set generation generation + 1
 end
 
 to setup-patches
@@ -80,6 +89,8 @@ to go
   set month int ((ticks mod 365) / 30.4 )
   check-turtles
   check-links
+  bee-raid
+  output
   if count bees > 0 [ tick ]
 end
 
@@ -246,9 +257,10 @@ to infect-per-tick
 end
 
 to bee-raid
-  set raid-start ticks
-  ask n-of ((count bees with [ age >= 21 ]) * percentage-infest / 100) bees with [ age >= 21] [
-    infest-bee
+  if ticks = raid-start [
+    ask n-of ((count bees with [ age >= 21 ]) * percentage-infest / 100) bees with [ age >= 21] [
+      infest-bee
+    ]
   ]
 end
 
@@ -315,23 +327,15 @@ to countermeasure
   ]
 end
 
-to setup-experiment
-  set infested 0
-  setup-turtles
-  reset-ticks
-end
-
-to go-experiment
-  if count mites >= count bees * 0.15 and infested = 0[
+to output
+  if count mites >= count bees * 0.15 and infested = 0 [
     output-print (word "gen" generation ": the mite population reached the critical point " (ticks - raid-start) " days after infestation")
     set infested 1
   ]
   if count bees <= 1 [
     output-print (word "gen" generation ": this generation is extinct after " (ticks - raid-start) " days")
-    set generation generation + 1
-    setup-experiment
+    setup
   ]
-  go
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -429,9 +433,9 @@ bee-shape
 
 SLIDER
 45
-140
+90
 217
-173
+123
 start-bees
 start-bees
 100
@@ -444,9 +448,9 @@ HORIZONTAL
 
 SLIDER
 45
-220
+195
 217
-253
+228
 probability-mites
 probability-mites
 0
@@ -470,9 +474,9 @@ month
 
 SLIDER
 45
-360
+240
 217
-393
+273
 percentage-infest
 percentage-infest
 0
@@ -483,77 +487,26 @@ percentage-infest
 %
 HORIZONTAL
 
-BUTTON
-90
-315
-168
-348
-NIL
-bee-raid
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
-
-BUTTON
-75
-90
-187
-123
-NIL
-go-experiment
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
-
 SLIDER
 45
-510
+465
 217
-543
+498
 percentage-mites
 percentage-mites
 0
 100
-11.0
+10.0
 1
 1
 %
 HORIZONTAL
 
-BUTTON
-70
-465
-191
-498
-NIL
-countermeasure
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
-
 SLIDER
 45
-552
+507
 217
-585
+540
 percentage-bees
 percentage-bees
 0
@@ -563,6 +516,39 @@ percentage-bees
 1
 %
 HORIZONTAL
+
+INPUTBOX
+55
+280
+207
+340
+raid-start
+100.0
+1
+0
+Number
+
+INPUTBOX
+45
+400
+125
+460
+counter-day
+10
+1
+0
+String
+
+INPUTBOX
+135
+400
+215
+460
+counter-ival
+100
+1
+0
+String
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1068,24 +1054,30 @@ NetLogo 6.2.1
   <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <metric>count turtles</metric>
+    <timeLimit steps="10000"/>
+    <metric>count bees with [ age &gt; 20 ]</metric>
+    <metric>count bees with [ age &lt;= 20 ]</metric>
+    <metric>count mites</metric>
     <enumeratedValueSet variable="percentage-bees">
       <value value="0"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="percantage-infestation">
-      <value value="10"/>
+    <enumeratedValueSet variable="percentage-infest">
+      <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="percentage-mites">
-      <value value="11"/>
+      <value value="10"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="bee-shape">
       <value value="&quot;bee&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="start-bees">
-      <value value="301"/>
+      <value value="200"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="probability-mites">
       <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="raid-start">
+      <value value="100"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
