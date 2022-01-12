@@ -26,7 +26,11 @@ globals [
   spawn-diameter
   month
   infested
-  generation
+  year
+  next-countermeasure
+  counter
+  extinct
+  bottomcount
 ]
 
 to setup
@@ -53,7 +57,10 @@ to setup-constants
   set eggs start-bees * 2000 / 60000
   set spawn-diameter start-bees / 30
   set month 0
-  set generation generation + 1
+  set year 365
+  set next-countermeasure 0
+  set counter 0
+  set extinct 0
 end
 
 to setup-patches
@@ -65,19 +72,12 @@ to setup-patches
 end
 
 to setup-turtles
-  create-queens 1 [
-    setxy 0 0
-    set size 2
-    set age 30
-    set max-age (random (2 * 365)) + 3 * 365
-    set color yellow
-    set shape "bee"
-  ]
+  breed-queens
   create-bees start-bees [
-    setxy random-xcor random-ycor
+    setxy random spawn-diameter - spawn-diameter / 2 random spawn-diameter - spawn-diameter / 2
     set size 1
     set age 30
-    ifelse month <= 5
+    ifelse month <= 7 and month > 2
       [ set max-age (random 30) + minlife-summer ]
       [ set max-age (random 30) + minlife-winter ]
     set color green
@@ -86,10 +86,11 @@ to setup-turtles
 end
 
 to go
-  set month int ((ticks mod 365) / 30.4 )
+  set month int ((ticks mod year) / 30.4 )
   check-turtles
   check-links
   bee-raid
+  countermeasure
   output
   if count bees > 0 [ tick ]
 end
@@ -107,13 +108,13 @@ to check-turtles
     infest-larva
 
     if breeding = 1 [
-      let temp 1
+      let breedstatus 1
       ask my-links [
           ask other-end [
-            if age = 21 [ set temp 0 ]
+            if age = 21 [ set breedstatus 0 ]
         ]
       ]
-      set breeding temp
+      set breeding breedstatus
     ]
 
     if mature = 1 [
@@ -132,7 +133,6 @@ to check-turtles
     if age >= 21 [
       set shape bee-shape
       move-bees
-      infect-per-tick
     ]
   ]
 
@@ -145,7 +145,7 @@ to check-turtles
     ]
   ]
 
-  if month <= 7 and count bees with [ age >= 21 ] > start-bees / 5 [
+  if month <= 9 and month > 2 and count bees with [ age >= 21 ] > start-bees / 5 [
     breed-bees
     breed-queens
   ]
@@ -155,10 +155,16 @@ to bee-older
   set age age + 1
   set max-age max-age - (count my-links)
   set max-age max-age - infected
-  if age > max-age [
+  if age > max-age or count bees = 0 [
     ask my-links [
       ask other-end [
-        if (random 10) > 8 [ set bottom 1 ]
+        ifelse distancexy 0 0 > (spawn-diameter / 2)
+          [ set bottom 1 ]
+          [ if drawer [
+              set bottom 1
+              set bottomcount bottomcount + 1
+            ]
+          ]
       ]
     ]
     die
@@ -174,8 +180,8 @@ to mite-older
 end
 
 to move-bees
-  let radius 20
-  if month > 7 or month = 0
+  let radius max-pxcor
+  if month > 9 or month < 3
     [ set radius spawn-diameter / 2 ]
   ifelse distancexy 0 0 > radius
     [ facexy 0 0 ]
@@ -204,9 +210,9 @@ to breed-bees
     set larvas eggs
   ]
   create-bees larvas [
-    setxy random spawn-diameter - 1 - spawn-diameter / 2 + 1 random spawn-diameter - 1 - spawn-diameter / 2 + 1
+    setxy random spawn-diameter - spawn-diameter / 2 random spawn-diameter - spawn-diameter / 2
     set age 0
-    ifelse month >= 7                                           ;; birth month of winterbees
+    ifelse month >= 9                                           ;; birth month of winterbees
       [ set max-age (random 30) + minlife-winter ]
       [ set max-age (random 30) + minlife-summer ]
     set color green
@@ -221,7 +227,7 @@ to breed-queens
       setxy 0 0
       set age 0
       set size 2
-      set max-age (random (2 * 365)) + 3 * 365
+      set max-age (random (2 * year)) + 3 * year
       set color yellow
       set shape "larva"
     ]
@@ -234,7 +240,7 @@ to breed-mites
     set size 1
     set age 20
     set age-alone 7
-    ifelse month >= 7
+    ifelse month >= 9 or month < 3
       [ set max-age (random 30) + minlife-winter ]
       [ set max-age (random 30) + minlife-summer ]
     set color red
@@ -250,14 +256,8 @@ to remove-queens
   ]
 end
 
-to infect-per-tick
-  if (random 100) < probability-mites and month <= 7 [
-    infest-bee
-  ]
-end
-
 to bee-raid
-  if ticks = raid-start [
+  if ticks mod year = raid-start [
     ask n-of ((count bees with [ age >= 21 ]) * percentage-infest / 100) bees with [ age >= 21] [
       infest-bee
     ]
@@ -270,7 +270,7 @@ to infest-bee
     set size 1
     set age 20
     set age-alone 7
-    ifelse month >= 7
+    ifelse month >= 9 or month <= 2
       [ set max-age (random 30) + minlife-winter ]
       [ set max-age (random 30) + minlife-summer ]
     set color red
@@ -319,22 +319,35 @@ to from-bee-to-new-bew
 end
 
 to countermeasure
-  ask n-of ((count mites) * percentage-mites / 100) mites [
-    die
-  ]
-  ask n-of ((count bees) * percentage-bees / 100) bees [
-    die
+  if counteractive [
+    if bottomcount > counter-start / 100 * start-bees and counter = 0 [
+      set counter counter-repeat
+      set bottomcount 0
+    ]
+
+    if counter > 0 and ticks > next-countermeasure  [
+      output-print (word "countermeasure at day " ticks)
+      set next-countermeasure counter-ival + ticks
+      set counter counter - 1
+      ask n-of ((count mites) * percentage-mites / 100) mites [
+        die
+      ]
+      ask n-of ((count bees) * percentage-bees / 100) bees [
+        die
+      ]
+    ]
   ]
 end
 
 to output
   if count mites >= count bees * 0.15 and infested = 0 [
-    output-print (word "gen" generation ": the mite population reached the critical point " (ticks - raid-start) " days after infestation")
+    output-print (word "the mite population reached the critical point " (ticks - raid-start) " days after infestation")
     set infested 1
   ]
-  if count bees <= 1 [
-    output-print (word "gen" generation ": this generation is extinct after " (ticks - raid-start) " days")
-    setup
+  if count bees <= 1 and extinct = 0 [
+    output-print (word "this population is extinct after " (ticks - raid-start) " days")
+    set extinct 1
+    ;setup
   ]
 end
 @#$#@#$#@
@@ -416,10 +429,10 @@ true
 "" ""
 PENS
 "bees" 1.0 0 -1184463 true "" "plot count bees with [ age > 20 ]"
-"larva" 1.0 0 -7500403 true "" "plot count bees with [ age <= 20 ]"
+"larva" 1.0 0 -13840069 true "" "plot count bees with [ age <= 20 ]"
 "mites" 1.0 0 -2674135 true "" "plot count mites"
-"mites bottom" 1.0 0 -955883 true "" "plot count mites with [ bottom = 1 ]"
-"infected bees" 1.0 0 -6459832 true "" "plot count bees with [ infected = 1 ]"
+"mites bottom" 1.0 0 -955883 true "" "plot bottomcount"
+"infected bees" 1.0 0 -13345367 true "" "plot count bees with [ infected = 1 ]"
 
 CHOOSER
 805
@@ -440,25 +453,10 @@ start-bees
 start-bees
 100
 1000
-301.0
+300.0
 1
 1
 NIL
-HORIZONTAL
-
-SLIDER
-45
-195
-217
-228
-probability-mites
-probability-mites
-0
-1
-0.0
-0.01
-1
-%
 HORIZONTAL
 
 MONITOR
@@ -474,21 +472,6 @@ month
 
 SLIDER
 45
-240
-217
-273
-percentage-infest
-percentage-infest
-0
-10
-1.0
-0.1
-1
-%
-HORIZONTAL
-
-SLIDER
-45
 465
 217
 498
@@ -496,7 +479,7 @@ percentage-mites
 percentage-mites
 0
 100
-10.0
+60.0
 1
 1
 %
@@ -518,26 +501,15 @@ percentage-bees
 HORIZONTAL
 
 INPUTBOX
-55
-280
-207
-340
-raid-start
-100.0
+45
+400
+130
+460
+counter-repeat
+0.0
 1
 0
 Number
-
-INPUTBOX
-45
-400
-125
-460
-counter-day
-10
-1
-0
-String
 
 INPUTBOX
 135
@@ -545,10 +517,73 @@ INPUTBOX
 215
 460
 counter-ival
-100
+50.0
 1
 0
-String
+Number
+
+SLIDER
+45
+220
+217
+253
+percentage-infest
+percentage-infest
+0
+10
+10.0
+0.1
+1
+%
+HORIZONTAL
+
+SLIDER
+45
+360
+217
+393
+counter-start
+counter-start
+0
+100
+50.0
+1
+1
+%
+HORIZONTAL
+
+INPUTBOX
+45
+155
+125
+215
+raid-start
+195.0
+1
+0
+Number
+
+SWITCH
+45
+280
+148
+313
+drawer
+drawer
+0
+1
+-1000
+
+SWITCH
+45
+320
+187
+353
+counteractive
+counteractive
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1054,30 +1089,33 @@ NetLogo 6.2.1
   <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="10000"/>
+    <timeLimit steps="5000"/>
+    <exitCondition>count bees &lt; 1</exitCondition>
     <metric>count bees with [ age &gt; 20 ]</metric>
     <metric>count bees with [ age &lt;= 20 ]</metric>
+    <metric>count bees with [ infected = 1 ]</metric>
     <metric>count mites</metric>
+    <metric>count mites with [ bottom = 1 ]</metric>
+    <steppedValueSet variable="percentage-infest" first="1" step="1" last="10"/>
     <enumeratedValueSet variable="percentage-bees">
       <value value="0"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="percentage-infest">
+    <enumeratedValueSet variable="percentage-mites">
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-start">
       <value value="1"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="percentage-mites">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="bee-shape">
-      <value value="&quot;bee&quot;"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="counter-repeat" first="0" step="1" last="5"/>
+    <steppedValueSet variable="counter-ival" first="0" step="5" last="30"/>
     <enumeratedValueSet variable="start-bees">
-      <value value="200"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="probability-mites">
-      <value value="0"/>
+      <value value="300"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="raid-start">
       <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="bee-shape">
+      <value value="&quot;bee&quot;"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
