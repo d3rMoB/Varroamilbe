@@ -15,22 +15,19 @@ mites-own [
   breeding
 ]
 
-links-own [
-  age-link
-]
-
 globals [
   minlife-summer
   minlife-winter
   eggs
   spawn-diameter
-  month
-  infested
   year
+  month
+  day
+  infested
   next-countermeasure
   counter
-  extinct
   bottomcount
+  extinct
 ]
 
 to setup
@@ -41,23 +38,13 @@ to setup
   reset-ticks
 end
 
-to my-clear-all
-  ; manually clear the globals we want reset, leave `retain-me` alone.
-
-  clear-ticks
-  clear-turtles
-  clear-patches
-  clear-drawing
-  clear-all-plots
-end
-
 to setup-constants
   set minlife-summer 60
   set minlife-winter 180
   set eggs start-bees * 2000 / 60000
   set spawn-diameter start-bees / 30
   set month 0
-  set year 365
+  set year 0
   set next-countermeasure 0
   set counter 0
   set extinct 0
@@ -72,33 +59,33 @@ to setup-patches
 end
 
 to setup-turtles
-  breed-queens
+  create-queens 1 [
+    setxy 0 0
+    set age 90
+    set size 2
+    set max-age (random (2 * 365)) + 3 * 365
+    set color white
+    set shape "bee"
+  ]
   create-bees start-bees [
-    setxy random spawn-diameter - spawn-diameter / 2 random spawn-diameter - spawn-diameter / 2
+    setxy (random spawn-diameter) - spawn-diameter / 2 (random spawn-diameter) - spawn-diameter / 2
     set size 1
-    set age 30
-    ifelse month <= 7 and month > 2
-      [ set max-age (random 30) + minlife-summer ]
-      [ set max-age (random 30) + minlife-winter ]
+    set age 90
+    set max-age (random 31) + minlife-winter
     set color green
     set shape "bee"
   ]
 end
 
 to go
-  set month int ((ticks mod year) / 30.4 )
+  set year int (ticks / 365) + 1
+  set month int ((ticks mod 365) / 30.4 ) + 1
+  set day int (ticks mod 365) + 1
   check-turtles
-  check-links
   bee-raid
   countermeasure
   output
   if count bees > 0 [ tick ]
-end
-
-to check-links
-  ask links [
-    set age-link age-link + 1
-  ]
 end
 
 to check-turtles
@@ -106,26 +93,7 @@ to check-turtles
     mite-older
     new-victim
     infest-larva
-
-    if breeding = 1 [
-      let breedstatus 1
-      ask my-links [
-          ask other-end [
-            if age = 21 [ set breedstatus 0 ]
-        ]
-      ]
-      set breeding breedstatus
-    ]
-
-    if mature = 1 [
-      ask my-links [
-        if other-end != nobody [
-          ask other-end [
-            if age = 13 [ breed-mites ]
-          ]
-        ]
-      ]
-    ]
+    mite-breeding
   ]
 
   ask bees [
@@ -138,14 +106,13 @@ to check-turtles
 
   ask queens [
     bee-older
-    remove-queens
     if age >= 16 [
       set shape bee-shape
       move-queens
     ]
   ]
 
-  if month <= 9 and month > 2 and count bees with [ age >= 21 ] > start-bees / 5 [
+  if month <= 10 and month > 2 and count bees with [ age >= 21 ] > start-bees / 5 [
     breed-bees
     breed-queens
   ]
@@ -158,13 +125,10 @@ to bee-older
   if age > max-age or count bees = 0 [
     ask my-links [
       ask other-end [
-        ifelse distancexy 0 0 > (spawn-diameter / 2)
-          [ set bottom 1 ]
-          [ if drawer [
-              set bottom 1
-              set bottomcount bottomcount + 1
-            ]
-          ]
+        if distancexy 0 0 < spawn-diameter [
+          set bottom 1
+          set bottomcount bottomcount + 1
+        ]
       ]
     ]
     die
@@ -172,7 +136,7 @@ to bee-older
 end
 
 to mite-older
-  if (count my-links) < 1 [
+  if (count my-links) = 0 [
     set age-alone age-alone - 1
   ]
   set age age + 1
@@ -181,12 +145,12 @@ end
 
 to move-bees
   let radius max-pxcor
-  if month > 9 or month < 3
+  if month > 10 or month < 3
     [ set radius spawn-diameter / 2 ]
   ifelse distancexy 0 0 > radius
     [ facexy 0 0 ]
-    [ right random 90
-      left random 90 ]
+    [ right random 91
+      left random 91 ]
   forward 1
 
   let xx xcor
@@ -199,8 +163,8 @@ end
 to move-queens
   ifelse distancexy 0 0 > 2
     [ facexy 0 0 ]
-    [ right random 90
-      left random 90 ]
+    [ right random 91
+      left random 91 ]
   forward 1
 end
 
@@ -210,11 +174,11 @@ to breed-bees
     set larvas eggs
   ]
   create-bees larvas [
-    setxy random spawn-diameter - spawn-diameter / 2 random spawn-diameter - spawn-diameter / 2
+    setxy (random spawn-diameter) - spawn-diameter / 2 (random spawn-diameter) - spawn-diameter / 2
     set age 0
-    ifelse month >= 9                                           ;; birth month of winterbees
-      [ set max-age (random 30) + minlife-winter ]
-      [ set max-age (random 30) + minlife-summer ]
+    ifelse month >= 10                                           ;; birth month of winterbees
+      [ set max-age (random 31) + minlife-winter ]
+      [ set max-age (random 31) + minlife-summer ]
     set color green
     set shape "larva"
     set heading 90
@@ -223,41 +187,33 @@ end
 
 to breed-queens
   if count queens < 1 [
-    create-queens (random 2) + 2 [
+    create-queens 1 [
       setxy 0 0
       set age 0
       set size 2
-      set max-age (random (2 * year)) + 3 * year
-      set color yellow
+      set max-age (random (2 * 365)) + 3 * 365
+      set color white
       set shape "larva"
     ]
   ]
 end
 
 to breed-mites
-  hatch-mites (random 2 + 1) [
+  hatch-mites 2 [
     create-link-with myself
     set size 1
     set age 20
     set age-alone 7
-    ifelse month >= 9 or month < 3
-      [ set max-age (random 30) + minlife-winter ]
-      [ set max-age (random 30) + minlife-summer ]
+    ifelse month >= 10 or month < 4
+      [ set max-age (random 31) + minlife-winter ]
+      [ set max-age (random 31) + minlife-summer ]
     set color red
     set shape "dot"
   ]
 end
 
-to remove-queens
-  if count queens with [ age > 16 ] > 1 [
-    ask one-of queens [
-      if (random 10) > 8 [ die ]
-    ]
-  ]
-end
-
 to bee-raid
-  if ticks mod year = raid-start [
+  if ticks mod 365 = raid-start [
     ask n-of ((count bees with [ age >= 21 ]) * percentage-infest / 100) bees with [ age >= 21] [
       infest-bee
     ]
@@ -270,9 +226,9 @@ to infest-bee
     set size 1
     set age 20
     set age-alone 7
-    ifelse month >= 9 or month <= 2
-      [ set max-age (random 30) + minlife-winter ]
-      [ set max-age (random 30) + minlife-summer ]
+    ifelse month >= 10 or month < 4
+      [ set max-age (random 31) + minlife-winter ]
+      [ set max-age (random 31) + minlife-summer ]
     set color red
     set shape "dot"
   ]
@@ -284,7 +240,7 @@ to infest-larva
   let count-links 0
   if victim != nobody [
     ask victim [ set count-links count my-links ]
-    if count-links < 1 [
+    if count-links = 0 [
       set mature 1
       set breeding 1
       ask my-links [ die ]
@@ -296,12 +252,36 @@ to infest-larva
   ]
 end
 
+to mite-breeding
+  if breeding = 1 [
+    let breedstatus 1
+    ask my-links [
+        ask other-end [
+          if age = 21 [ set breedstatus 0 ]
+      ]
+    ]
+    set breeding breedstatus
+  ]
+
+  if mature = 1 [
+    ask my-links [
+      if other-end != nobody [
+        ask other-end [
+          if age = 13 [ breed-mites ]
+        ]
+      ]
+    ]
+  ]
+end
+
 to new-victim
-  if (count my-links) < 1 and bottom = 0 [
+  if (count my-links) = 0 and bottom = 1 and not grid [
     let victim one-of bees-here
     if victim != nobody [
       ask victim [ create-link-with myself ]
       set age-alone 7
+      set bottom 0
+      set bottomcount bottomcount - 1
     ]
   ]
 end
@@ -319,10 +299,11 @@ to from-bee-to-new-bew
 end
 
 to countermeasure
-  if counteractive [
+  if counter-active [
     if bottomcount > counter-start / 100 * start-bees and counter = 0 [
       set counter counter-repeat
       set bottomcount 0
+      ask mites with [ bottom = 1 ] [ die ]
     ]
 
     if counter > 0 and ticks > next-countermeasure  [
@@ -460,9 +441,9 @@ NIL
 HORIZONTAL
 
 MONITOR
-805
+870
 480
-862
+927
 525
 NIL
 month
@@ -494,7 +475,7 @@ percentage-bees
 percentage-bees
 0
 100
-0.0
+15.0
 1
 1
 %
@@ -506,7 +487,7 @@ INPUTBOX
 130
 460
 counter-repeat
-0.0
+1.0
 1
 0
 Number
@@ -524,14 +505,14 @@ Number
 
 SLIDER
 45
-220
+210
 217
-253
+243
 percentage-infest
 percentage-infest
 0
 10
-10.0
+2.7
 0.1
 1
 %
@@ -546,31 +527,20 @@ counter-start
 counter-start
 0
 100
-50.0
+100.0
 1
 1
 %
 HORIZONTAL
-
-INPUTBOX
-45
-155
-125
-215
-raid-start
-195.0
-1
-0
-Number
 
 SWITCH
 45
 280
 148
 313
-drawer
-drawer
-0
+grid
+grid
+1
 1
 -1000
 
@@ -579,11 +549,48 @@ SWITCH
 320
 187
 353
-counteractive
-counteractive
+counter-active
+counter-active
 0
 1
 -1000
+
+SLIDER
+45
+170
+217
+203
+raid-start
+raid-start
+1
+365
+195.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+935
+480
+992
+525
+NIL
+day
+17
+1
+11
+
+MONITOR
+805
+480
+862
+525
+NIL
+year
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
