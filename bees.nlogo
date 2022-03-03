@@ -460,7 +460,7 @@ percentage-mites
 percentage-mites
 0
 100
-60.0
+70.0
 1
 1
 %
@@ -475,7 +475,7 @@ percentage-bees
 percentage-bees
 0
 100
-15.0
+0.0
 1
 1
 %
@@ -498,7 +498,7 @@ INPUTBOX
 215
 460
 counter-ival
-50.0
+0.0
 1
 0
 Number
@@ -511,9 +511,9 @@ SLIDER
 percentage-infest
 percentage-infest
 0
-10
-2.7
-0.1
+25
+20.0
+1
 1
 %
 HORIZONTAL
@@ -527,7 +527,7 @@ counter-start
 counter-start
 0
 100
-100.0
+1.0
 1
 1
 %
@@ -540,7 +540,7 @@ SWITCH
 313
 grid
 grid
-1
+0
 1
 -1000
 
@@ -1093,36 +1093,164 @@ NetLogo 6.2.1
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="ohne" repetitions="10" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="5000"/>
+    <timeLimit steps="3650"/>
     <exitCondition>count bees &lt; 1</exitCondition>
     <metric>count bees with [ age &gt; 20 ]</metric>
     <metric>count bees with [ age &lt;= 20 ]</metric>
     <metric>count bees with [ infected = 1 ]</metric>
     <metric>count mites</metric>
-    <metric>count mites with [ bottom = 1 ]</metric>
-    <steppedValueSet variable="percentage-infest" first="1" step="1" last="10"/>
-    <enumeratedValueSet variable="percentage-bees">
+    <metric>bottomcount</metric>
+    <metric>ticks</metric>
+    <enumeratedValueSet variable="start-bees">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="raid-start">
+      <value value="195"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="percentage-infest" first="5" step="5" last="25"/>
+    <enumeratedValueSet variable="grid">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-active">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-start">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-repeat">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-ival">
       <value value="0"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="percentage-mites">
       <value value="60"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="counter-start">
-      <value value="1"/>
+    <enumeratedValueSet variable="percentage-bees">
+      <value value="0"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="counter-repeat" first="0" step="1" last="5"/>
-    <steppedValueSet variable="counter-ival" first="0" step="5" last="30"/>
+  </experiment>
+  <experiment name="grid" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="3650"/>
+    <exitCondition>count bees &lt; 1</exitCondition>
+    <metric>count bees with [ age &gt; 20 ]</metric>
+    <metric>count bees with [ age &lt;= 20 ]</metric>
+    <metric>count bees with [ infected = 1 ]</metric>
+    <metric>count mites</metric>
+    <metric>bottomcount</metric>
+    <metric>ticks</metric>
     <enumeratedValueSet variable="start-bees">
       <value value="300"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="raid-start">
-      <value value="100"/>
+      <value value="195"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="bee-shape">
-      <value value="&quot;bee&quot;"/>
+    <steppedValueSet variable="percentage-infest" first="5" step="5" last="25"/>
+    <enumeratedValueSet variable="grid">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-active">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-start">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-repeat">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-ival">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-mites">
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-bees">
+      <value value="0"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="counter" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="3650"/>
+    <exitCondition>count bees &lt; 1</exitCondition>
+    <metric>count bees with [ age &gt; 20 ]</metric>
+    <metric>count bees with [ age &lt;= 20 ]</metric>
+    <metric>count bees with [ infected = 1 ]</metric>
+    <metric>count mites</metric>
+    <metric>bottomcount</metric>
+    <metric>ticks</metric>
+    <enumeratedValueSet variable="start-bees">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="raid-start">
+      <value value="195"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="percentage-infest" first="5" step="5" last="25"/>
+    <enumeratedValueSet variable="grid">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-active">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-start">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-repeat">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-ival">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-mites">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-bees">
+      <value value="0"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="counter grid" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="3650"/>
+    <exitCondition>count bees &lt; 1</exitCondition>
+    <metric>count bees with [ age &gt; 20 ]</metric>
+    <metric>count bees with [ age &lt;= 20 ]</metric>
+    <metric>count bees with [ infected = 1 ]</metric>
+    <metric>count mites</metric>
+    <metric>bottomcount</metric>
+    <metric>ticks</metric>
+    <enumeratedValueSet variable="start-bees">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="raid-start">
+      <value value="195"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="percentage-infest" first="5" step="5" last="25"/>
+    <enumeratedValueSet variable="grid">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-active">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-start">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-repeat">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="counter-ival">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-mites">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-bees">
+      <value value="0"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
